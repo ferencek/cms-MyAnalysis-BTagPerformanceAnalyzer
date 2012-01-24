@@ -22,7 +22,7 @@ process.TFileService = cms.Service("TFileService",
 )
 
 process.bTagPerformanceAnalyzer = cms.EDAnalyzer('BTagPerformanceAnalyzer',
-    BTagAlgoWP = cms.vstring("TCHEM", "SSVHEM"),
+    BTagAlgoWP = cms.vstring("TCHEM", "TCHPT", "SSVHEM", "SSVHPT"),
     PtNBins    = cms.int32(50),
     PtMin      = cms.double(20.),
     PtMax      = cms.double(520),

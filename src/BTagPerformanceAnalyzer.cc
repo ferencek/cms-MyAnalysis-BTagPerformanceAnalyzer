@@ -13,7 +13,7 @@
 //
 // Original Author:  Dinko Ferencek
 //         Created:  Tue Oct 18 13:53:35 CDT 2011
-// $Id$
+// $Id: BTagPerformanceAnalyzer.cc,v 1.1 2011/11/10 01:00:14 ferencek Exp $
 //
 //
 
@@ -68,7 +68,7 @@ class BTagPerformanceAnalyzer : public edm::EDAnalyzer {
       std::vector<std::string> bTagAlgoWP;
       edm::Service<TFileService> fs;
       int PtNBins, etaNBins;
-      double PtMin, PtMax, etaMin, etaMax;
+      double PtMin, PtMax, etaMin, etaMax, testPt, testEta;
       std::map<std::string, TH2D*> h2_BTagScaleFactorMap;
 };
 
@@ -94,7 +94,9 @@ BTagPerformanceAnalyzer::BTagPerformanceAnalyzer(const edm::ParameterSet& iConfi
    etaNBins   = iConfig.getParameter<int>("etaNBins");
    etaMin     = iConfig.getParameter<double>("etaMin");
    etaMax     = iConfig.getParameter<double>("etaMax");
-   
+   testPt     = iConfig.getParameter<double>("TestPt");
+   testEta    = iConfig.getParameter<double>("TestEta");
+
    for( std::vector<std::string>::const_iterator it = bTagAlgoWP.begin(); it != bTagAlgoWP.end(); ++it )
    {
      h2_BTagScaleFactorMap[*it + "_BTagScaleFactors"]   = fs->make<TH2D>(("h2_" + *it + "_BTagScaleFactors").c_str(),(*it + "_BTagScaleFactors;p_{T} [GeV];#eta").c_str(),PtNBins,PtMin,PtMax,etaNBins,etaMin,etaMax);
@@ -126,13 +128,13 @@ BTagPerformanceAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
    for( std::vector<std::string>::const_iterator it = bTagAlgoWP.begin(); it != bTagAlgoWP.end(); ++it )
    {     
      edm::ESHandle<BtagPerformance> perfBTag;
-     iSetup.get<BTagPerformanceRecord>().get("BTAG" + *it,perfBTag);
+     iSetup.get<BTagPerformanceRecord>().get("MUJETSWPBTAG" + *it,perfBTag);
 
      edm::ESHandle<BtagPerformance> perfMistag;
      iSetup.get<BTagPerformanceRecord>().get("MISTAG" + *it,perfMistag);
 
 //      std::cout << "b-tag algo: " << *it << " Working point: " << perfBTag->workingPoint().cut() << std::endl;
-     
+
      double jetPt, jetAbsEta, btagSF, btagSF_error, mistagSF, mistagSF_error;
      BinningPointByMap p;
 
@@ -147,7 +149,7 @@ BTagPerformanceAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
          jetAbsEta = etaMin + etaBinWidth/2 + etaBinWidth*j;
 
          p.reset();
-         p.insert(BinningVariables::JetAbsEta,jetAbsEta);
+         p.insert(BinningVariables::JetEta,jetAbsEta);
          p.insert(BinningVariables::JetEt,jetPt);
 
          btagSF = perfBTag->getResult( PerformanceResult::BTAGBEFFCORR, p );
@@ -161,16 +163,18 @@ BTagPerformanceAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup
          h2_BTagScaleFactorMap[*it + "_MistagScaleFactors"]->SetBinError(i+1, j+1, (mistagSF_error<0 ? 0 : mistagSF_error));
        }
      }
-//      jetPt = 50.5;
-//      jetAbsEta = 0.605;
-// 
-//      std::cout << "Jet Pt = " << jetPt <<" GeV, |eta| = " << jetAbsEta << " --> Is it OK? " << perfBTag->isResultOk( PerformanceResult::BTAGBEFFCORR, p ) << std::endl
-//                << "b-tag data/MC scale factor: " << perfBTag->getResult( PerformanceResult::BTAGBEFFCORR, p ) << std::endl
-//                << "b-tag data/MC scale factor error: " << perfBTag->getResult( PerformanceResult::BTAGBERRCORR, p ) << std::endl;
-// 
-//      std::cout << "Jet Pt = " << jetPt <<" GeV, |eta| = " << jetAbsEta << " --> Is it OK? " << perfMistag->isResultOk( PerformanceResult::BTAGLEFFCORR, p ) << std::endl
-//                << "mistag data/MC scale factor: " << perfMistag->getResult( PerformanceResult::BTAGLEFFCORR, p ) << std::endl
-//                << "mistag data/MC scale factor error: " << perfMistag->getResult( PerformanceResult::BTAGLERRCORR, p ) << std::endl;
+
+     p.reset();
+     p.insert(BinningVariables::JetEta,testEta);
+     p.insert(BinningVariables::JetEt,testPt);
+
+     std::cout << "Jet Pt = " << testPt <<" GeV, |eta| = " << testEta << " --> Is it OK? " << perfBTag->isResultOk( PerformanceResult::BTAGBEFFCORR, p ) << std::endl
+               << "b-tag data/MC scale factor: " << perfBTag->getResult( PerformanceResult::BTAGBEFFCORR, p ) << std::endl
+               << "b-tag data/MC scale factor error: " << perfBTag->getResult( PerformanceResult::BTAGBERRCORR, p ) << std::endl;
+
+     std::cout << "Jet Pt = " << testPt <<" GeV, |eta| = " << testEta << " --> Is it OK? " << perfMistag->isResultOk( PerformanceResult::BTAGLEFFCORR, p ) << std::endl
+               << "mistag data/MC scale factor: " << perfMistag->getResult( PerformanceResult::BTAGLEFFCORR, p ) << std::endl
+               << "mistag data/MC scale factor error: " << perfMistag->getResult( PerformanceResult::BTAGLERRCORR, p ) << std::endl;
    }
    
 }
